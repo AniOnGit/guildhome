@@ -1,18 +1,6 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of Env
- *
- * @author Christian Voigt <chris at notjustfor.me>
- */
 class Env {
-
     private static $instance;
     private $post = [];
     private $get = [];
@@ -32,8 +20,23 @@ class Env {
     }
 
     static function registerHook($key, callable $callback) {
-        self::$hooks[$key] = $callback;
+        self::$hooks[] = [$key => $callback];
         return true;
+    }
+    
+    static function getHooks($searchkey = null) {
+        if ($searchkey === null) {
+            return self::$hooks;
+        }
+        foreach (self::$hooks as $hook) {
+            if (key($hook) == $searchkey) {
+                $resultHooks[] = $hook;
+            }
+        }
+        if (is_array($resultHooks)) {
+            return $resultHooks;
+        }
+        return false;
     }
     
     private static function getEnv() {
@@ -124,4 +127,23 @@ class Env {
         return $timezone_list;
     }
     
+    public static function getCurrentURL() {
+        return $absolute_url = Env::fullUrl( $_SERVER );
+    }
+    
+    static function urlOrigin( $s, $use_forwarded_host = false ) {
+        $ssl      = ( ! empty( $s['HTTPS'] ) && $s['HTTPS'] == 'on' );
+        $sp       = strtolower( $s['SERVER_PROTOCOL'] );
+        $protocol = substr( $sp, 0, strpos( $sp, '/' ) ) . ( ( $ssl ) ? 's' : '' );
+        $port     = $s['SERVER_PORT'];
+        $port     = ( ( ! $ssl && $port=='80' ) || ( $ssl && $port=='443' ) ) ? '' : ':'.$port;
+        $host     = ( $use_forwarded_host && isset( $s['HTTP_X_FORWARDED_HOST'] ) ) ? $s['HTTP_X_FORWARDED_HOST'] : ( isset( $s['HTTP_HOST'] ) ? $s['HTTP_HOST'] : null );
+        $host     = isset( $host ) ? $host : $s['SERVER_NAME'] . $port;
+        return $protocol . '://' . $host;
+    }
+
+    static function fullUrl( $s, $use_forwarded_host = false ) {
+        return Env::urlOrigin( $s, $use_forwarded_host ) . $s['REQUEST_URI'];
+    }
+   
 }

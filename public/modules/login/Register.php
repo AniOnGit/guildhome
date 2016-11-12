@@ -1,21 +1,7 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of Register
- *
- * @author Christian Voigt <chris at notjustfor.me>
- */
 class Register {
-    /**
-     * @var object The database connection
-     */
-    
+
     public function initEnv() {
         Toro::addRoute(["/register" => 'Register']);
     }
@@ -31,7 +17,7 @@ class Register {
         
         if (isset($env->post('register')['submit'])) {
             if ($this->registerNewUser() !== false) {
-                header("Location: /login");
+                header("Location: /activities");
             } else {
                 header("Location: /register");
             }
@@ -111,8 +97,12 @@ class Register {
                 if ($result) {
                     $msg->add('register_general_validation', "User " . $username . " has been created.");
                     $env->clearPost('register');
-                    if (isset($env::$hooks['new_user_hook'])) {
-                        $env::$hooks['new_user_hook']($db->insert_id);
+
+                    $hooks = $env::getHooks('save_new_user_hook');
+                    if ($hooks!== false) {
+                        foreach ($hooks as $hook) {
+                            $hook['save_new_user_hook']($db->insert_id);
+                        }
                     }
                     return $db->insert_id; // user creation complete
                 } else {
@@ -162,3 +152,4 @@ class Register {
 }
 $register = new Register();
 $register->initEnv();
+unset($register);

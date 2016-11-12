@@ -1,0 +1,70 @@
+/* general sidebar stuff */
+.main-container aside {}
+
+.main-container aside {
+    background: #ffffff;
+    color: #EA6C12;
+}
+
+.main-container aside ul {
+    padding: 0;
+    list-style-type: none;
+}
+
+.main-container aside ul li {
+    clear: both;
+}
+
+/* combo login-form in sidebar */
+.main-container aside ul li form {
+    position: relative;
+}
+
+.main-container aside ul li form label {
+    width: 100%;
+    display: inline-block;
+    clear: both;
+}
+
+.main-container aside ul li form label input {
+    float: right;
+}
+
+.main-container aside ul li form input[type="submit"] {
+    color: buttontext;
+    background-color: buttonface;
+}
+
+input#logout_submit[type="submit"],
+input#logout_submit[type="submit"]:focus,
+input#logout_submit[type="submit"]:active {
+    /* Remove all decorations to look like normal text */
+    box-shadow: none;
+    background: #ffffff;
+    color: #EA6C12;
+    border: none;
+    display: inline;
+    font: inherit;
+    margin: 0; padding: 0;
+    outline: none;
+    outline-offset: 0;
+    /* Additional styles to look like a link */
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: none;
+}
+/* Remove extra space inside buttons in Firefox */
+input[type="submit"]::-moz-focus-inner {
+    border: none;
+    padding: 0;
+}
+
+input#logout_submit[type="submit"]:hover {
+    text-decoration: underline;
+}
+
+.main-container aside ul li form a {
+    position: absolute;
+    right: 0; bottom: 0;
+    margin: 0 0 -0.4em 0; padding: 0;
+}

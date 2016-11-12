@@ -1,10 +1,10 @@
 <?php
+
 class Activity_Shout extends Activity {
     // start controller
     function initEnv() {
-        Toro::addRoute(["/activities/shouts" => "Activity_Shout"]);
         Toro::addRoute(["/activity/shout/:alpha" => "Activity_Shout"]);
-        Toro::addRoute(["/activity/shout/:alpha/:alpha" => "Activity_Shout"]);
+        Toro::addRoute(["/activity/shout/:alpha/:number" => "Activity_Shout"]);
       
         Env::registerHook('shout', array(new Activity_Shout(), 'getActivityView'));
     }
@@ -13,12 +13,9 @@ class Activity_Shout extends Activity {
         $env = Env::getInstance();
         $login = new Login();
         $page = Page::getInstance();
-        $page->addContent('{##main##}', parent::activityMenu('shout'));
+        $menu = new Menu();
+        $page->addContent('{##main##}', $menu->activityMenu('shout', $compact = true));
         switch ($alpha) {
-            default :
-                $env->clearPost('activity');
-                $page->addContent('{##main##}', $this->getAllActivitiesView('1')); // 1 = shout
-                break;
             case 'new' :
                 if (!$login->isLoggedIn()) {
                     return false;
@@ -34,7 +31,7 @@ class Activity_Shout extends Activity {
                     return false;
                 }
                 $page->addContent('{##main##}', '<h2>Update shout</h2>');
-                $page->addContent('{##main##}', $this->getUpdateActivityForm($id));
+                $page->addContent('{##main##}', $this->getActivityForm($id));
                 if (isset($env->post('activity')['preview'])) {
                     $page->addContent('{##main##}', $this->getActivityPreview());
                 }
@@ -49,7 +46,7 @@ class Activity_Shout extends Activity {
         }
     }
 
-    function post($alpha, $id = NULL) {
+    function post($alpha, $shout_id = NULL) {
         $env = Env::getInstance();
         $login = new Login();
         if (!$login->isLoggedIn()) {
@@ -57,29 +54,26 @@ class Activity_Shout extends Activity {
         }
         switch ($alpha) {
             case 'new' :
-                if ($this->validateActivity() === true AND !isset($env->post('activity')['preview'])) {
-                    if ($this->saveActivity() === true) {
-                        header("Location: /activities/shouts");
-                        exit;
-                    }
+                if (isset($env->post('activity')['preview'])) {
+                    unset($env->post('activity')['preview']);
+                } elseif (($shout_id = $this->saveActivity('shout')) !== false) {
+                    $this->get('update', $shout_id);
+                    break;
                 }
-                unset($env->post('activity')['preview']);
-                $this->get('new', $id);
+                $this->get('new', $shout_id);    
                 break;
             case 'update' :
-                if ($this->validateActivity() === true AND !isset($env->post('activity')['preview'])) {
-                    if ($this->updateActivity($id) === true) {
-                        header("Location: /activities/shouts");
-                        exit;
-                    }
+                if (isset($env->post('activity')['preview'])) {
+                    unset($env->post('activity')['preview']);
+                } else {
+                    $this->updateActivity($shout_id);
                 }
-                unset($env->post('activity')['preview']);
-                $this->get('update', $id);
+                $this->get('update', $shout_id);
                 break;
             case 'delete' :
                 if (isset($env->post('activity')['submit'])) {
                     if ($env->post('activity')['submit'] === 'delete') {
-                        if ($this->deleteActivity($id) === true) {
+                        if ($this->deleteActivity($shout_id) === true) {
                             header("Location: /activities/shouts");
                         }
                     }
@@ -92,7 +86,7 @@ class Activity_Shout extends Activity {
     }
     // end controller    
     // start model
-    function getActivity($id) {
+    function getActivityById($id) {
         $db = db::getInstance();
         $sql = "SELECT a.comments_enabled AS comments_enabled, ash.content AS content, a.userid AS userid
                     FROM activity_shouts ash
@@ -109,34 +103,33 @@ class Activity_Shout extends Activity {
         }
         return false;
     }
-    function saveActivity() {
+
+    function saveActivityTypeDetails($activity_id) {
         $db = db::getInstance();
         $env = Env::getInstance();
         
         // save activity meta data
-        $allow_comments = isset($env->post('activity')['comments']) ? '1' : '0';
-        $activity_id = $this->save($type = '1', $allow_comments); // 1=shout
-
-        // save 'shout' specific data
         $content = $env->post('activity')['content'];
 
         $sql = "INSERT INTO activity_shouts (activity_id, content) VALUES ('$activity_id', '$content');";
         $query = $db->query($sql);
         if ($query !== false) {
             $env->clearPost('activity');
-            return true;
+            $msg = Msg::getInstance();
+            $msg->add('activity_shout_content_saved', 'Activity saved!');
+            return $activity_id;
         }
         return false;
     }
     
-    function updateActivity($shout_id) {
+    function updateActivityTypeDetails($shout_id) {
         $db = db::getInstance();
         $env = Env::getInstance();
         $login = new Login();
 
         $userid = $login->currentUserID();
-        $actid = $this->getActivity($shout_id)->userid;
-        if ($userid != $actid) {
+        $act = $this->getActivityById($shout_id);
+        if ($userid != $act->userid) {
             return false;
         }
         
@@ -154,29 +147,9 @@ class Activity_Shout extends Activity {
         $query = $db->query($sql);
         if ($query !== false) {
             $env->clearPost('activity');
-            return true;
-        }
-        return false;
-    }
-    
-    function deleteActivity($shout_id) {
-        $db = db::getInstance();
-        $env = Env::getInstance();
-        $login = new Login();
-
-        $userid = $login->currentUserID();
-        $actid = $this->getActivity($shout_id)->userid;
-        if ($userid != $actid) {
-            return false;
-        }
-        $sql = "UPDATE activities SET deleted = '1' WHERE id = '$shout_id';";
-        $query = $db->query($sql);
-        if ($query !== false) {
-            $env->clearPost('activity');
-            if (isset($env::$hooks['delete_event_hook'])) {
-                $env::$hooks['delete_event_hook']($shout_id);
-            }
-            return true;
+            $msg = Msg::getInstance();
+            $msg->add('activity_shout_content_saved', 'Activity updated!');
+            return $shout_id;
         }
         return false;
     }
@@ -208,8 +181,8 @@ class Activity_Shout extends Activity {
         return $view;
     }
     
-    function getActivityView($activity_id = NULL, $compact = NULL) {
-        $act = parent::getActivityById($activity_id);
+    public function getActivityView($activity_id = NULL, $compact = NULL) {
+        $act = parent::getActivityMetaById($activity_id);
 
         $view = new View();
         $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_view.php'));
@@ -226,7 +199,7 @@ class Activity_Shout extends Activity {
             $subView->addContent('{##css##}', ' deleted');
         }
 
-        $activity_event = $this->getActivity($act->id);
+        $activity_event = $this->getActivityById($act->id);
         $content = Parsedown::instance()->text($activity_event->content);
 
         $delete_link = '/activity/shout/delete/' . $act->id;
@@ -242,7 +215,7 @@ class Activity_Shout extends Activity {
         }
 
         if (isset($activity_event->comments_enabled) AND $activity_event->comments_enabled == '1') {
-            $comment = new Comment();
+            $comment = new Activity_Comment();
             $comment_count = $comment->getCommentCount($act->id);
 
             $visitorView = new View();
@@ -269,61 +242,61 @@ class Activity_Shout extends Activity {
         return $view;
     }
     
-    function getActivityForm() {
+    function getActivityForm($id = NULL) {
         $env = Env::getInstance();
         $msg = Msg::getInstance();
 
-        if ($env->post('activity') === FALSE) { // check comments by default
-            $comments_checked = 'checked="checked"';
-        } else {
-            if (!empty($env->post('activity')['comments']) AND is_string($env->post('activity')['comments']) === TRUE) {
+        if ($id === NULL) {
+            if ($env->post('activity') === FALSE) { // check comments by default
                 $comments_checked = 'checked="checked"';
             } else {
-                $comments_checked = '';
+                if (!empty($env->post('activity')['comments']) AND is_string($env->post('activity')['comments']) === TRUE) {
+                    $comments_checked = 'checked="checked"';
+                } else {
+                    $comments_checked = '';
+                }
             }
+
+            $content = $env->post('activity')['content'];
+            $content = str_replace("\n\r", "&#13;", $content);
+
+            $view = new View();
+            $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array(
+                '{##form_action##}' => '/activity/shout/new',
+                '{##activity_content##}' => $content,
+                '{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),
+                '{##activity_shout_content_saved##}' => $msg->fetch('activity_shout_content_saved', 'success'),
+                '{##activity_comments_checked##}' => $comments_checked,
+                '{##preview_text##}' => 'Preview',
+                '{##submit_text##}' => 'Say it loud',
+            ));
+        } else {
+            $act = $this->getActivityById($id);
+            $content = (isset($env->post('activity')['content'])) ? $env->post('activity')['content'] : $act->content;
+            $content = str_replace("\n\r", "&#13;", $content);
+
+            $comments_checked = (isset($env->post('activity')['comments'])) ? $env->post('activity')['comments'] : $act->comments_enabled;
+            $comments_checked = ($comments_checked == '1') ? 'checked="' . $comments_checked . '"' : '';
+
+            $view = new View();
+            $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array(
+                '{##form_action##}' => '/activity/shout/update/' . $id,
+                '{##activity_content##}' => $content,
+                '{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),
+                '{##activity_shout_content_saved##}' => $msg->fetch('activity_shout_content_saved', 'success'),
+                '{##activity_comments_checked##}' => $comments_checked,
+                '{##preview_text##}' => 'Preview',
+                '{##draft_text##}' => 'Save as draft',
+                '{##submit_text##}' => "i'm sure now!",
+            ));
         }
-
-        $view = new View();
-        $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array(
-            '{##form_action##}' => '/activity/shout/new',
-            '{##activity_content##}' => $env->post('activity')['content'],
-            '{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),
-            '{##activity_comments_checked##}' => $comments_checked,
-            '{##preview_text##}' => 'Preview',
-            '{##submit_text##}' => 'Say it loud',
-        ));
-        $view->replaceTags();
-        return $view;
-    }
-    
-    function getUpdateActivityForm($id) {
-        $env = Env::getInstance();
-        $msg = Msg::getInstance();
-
-        $act = $this->getActivity($id);
-        $content = (isset($env->post('activity')['content'])) ? $env->post('activity')['content'] : $act->content;
-        
-        $comments_checked = (isset($env->post('activity')['comments'])) ? $env->post('activity')['comments'] : $act->comments_enabled;
-        $comments_checked = ($comments_checked == '1') ? 'checked="' . $comments_checked . '"' : '';
-
-        $view = new View();
-        $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array(
-            '{##form_action##}' => '/activity/shout/update/' . $id,
-            '{##activity_content##}' => $content,
-            '{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),
-            '{##activity_comments_checked##}' => $comments_checked,
-            '{##preview_text##}' => 'Preview',
-            '{##draft_text##}' => 'Save as draft',
-            '{##submit_text##}' => "i'm sure now!",
-        ));
         $view->replaceTags();
         return $view;
     }
     
     function getDeleteActivityForm($id = NULL) {
-
         if ($id !== NULL) {
-            $act = $this->getActivity($id);
+            $act = $this->getActivityById($id);
             $content = $act->content;
         } else {
             $content = '';
@@ -340,7 +313,7 @@ class Activity_Shout extends Activity {
         return $view;
     }
     
-    function validateActivity() {
+    function validateActivityTypeDetails() {
         $msg = Msg::getInstance();
         $env = Env::getInstance();
        
@@ -355,7 +328,12 @@ class Activity_Shout extends Activity {
         }
         return false;
     }
+
+    function createActivityTypeDatabaseTables($overwriteIfExists = false) {
+        return true;
+    }
     // end view
 }
-$activity_shout = new Activity_Shout();
-$activity_shout->initEnv();
+$init_env = new Activity_Shout();
+$init_env->initEnv();
+unset($init_env);

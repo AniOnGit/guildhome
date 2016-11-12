@@ -1,19 +1,5 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of gw2api
- *
- * Doing some quick hacks to see whats out there. This will take the hell of a
- * lot of time to make this remotely modular :)
- * 
- * @author ecv
- */
 class gw2api {
     
     function initEnv() {
@@ -584,3 +570,4 @@ class gw2api {
 }
 $gw2api = new gw2api();
 $gw2api->initEnv();
+unset($gw2api);

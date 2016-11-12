@@ -1,16 +1,5 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of About
- *
- * @author Christian Voigt <chris at notjustfor.me>
- */
 class Dev {
 
     function initEnv() {
@@ -85,13 +74,8 @@ class Dev {
                 break;
         }
     }
-    
-    
-    function getThemeSwitcherView() {
-        
-    }
 
 }
-
 $dev = new Dev();
 $dev->initEnv();
+unset($dev);

@@ -1,11 +1,11 @@
 <?php
+
 class Activity_Event_Signups {
     // start controller
     function initEnv() {
-        Toro::addRoute(["/activity/event/signups/new" => "Activity_Event_Signups"]);
         Toro::addRoute(["/activity/event/signups/:alpha/:number" => "Activity_Event_Signups"]);
         
-        Env::registerHook('event_signups', array(new Activity_Event_Signups(), 'getSignupsFormView'));
+        Env::registerHook('activity_event_form_hook', array(new Activity_Event_Signups(), 'getSignupsFormView'));
         Env::registerHook('activity_event_view_hook', array(new Activity_Event_Signups(), 'activityEventSignupsViewHook'));
     }
 
@@ -35,7 +35,7 @@ class Activity_Event_Signups {
 
     function getActivitySignupsView($event_id) {
         $activity_event = new Activity_Event();
-        $act = $activity_event->getActivity($event_id);
+        $act = $activity_event->getActivityByID($event_id);
 
         $signups_checked = $act->signups_activated;
         if ($signups_checked == '1') {
@@ -50,7 +50,7 @@ class Activity_Event_Signups {
                 $signed_up_users = 'No signups so far! Be the first!';
             }
             $view = new View();
-            $view->setTmpl($view->loadFile('/views/activity/event/activity_event_signups_view.php'), array(
+            $view->setTmpl($view->loadFile('/views/activity/event/signups/activity_event_signups_view.php'), array(
                 '{##signups##}' => $signed_up_users,
             ));
 
@@ -62,7 +62,7 @@ class Activity_Event_Signups {
     
     function getSignupForm($event_id, $target_url = '') {
         $activity_event = new Activity_Event();
-        $act = $activity_event->getActivity($event_id);
+        $act = $activity_event->getActivityByID($event_id);
 
         $login = new Login();
         if (!$login->isLoggedIn() OR $act->signups_activated != '1' OR $activity_event->eventIsCurrent($act) === false) {
@@ -70,7 +70,7 @@ class Activity_Event_Signups {
         }
         
         $view = new View();
-        $view->setTmpl($view->loadFile('/views/activity/event/activity_event_signup_button.php'));        
+        $view->setTmpl($view->loadFile('/views/activity/event/signups/activity_event_signups_button.php'));        
         $view->setContent('{##signup##}', '/activity/event/signups/signup/' . $event_id);
         if ($this->isSignedUp($event_id)) {
             $view->addContent('{##signup_text##}', 'Signout');
@@ -87,11 +87,11 @@ class Activity_Event_Signups {
         $env = Env::getInstance();
         
         $view = new View();
-        $view->setTmpl($view->loadFile('/views/activity/event/activity_signups_form.php'));
+        $view->setTmpl($view->loadFile('/views/activity/event/signups/activity_event_signups_form.php'));
         
         $view->addContent('{##form_action##}', '/activity/event/signups/update/' . $id);
         $activity_event = new Activity_Event();
-        $act = $activity_event->getActivity($id);
+        $act = $activity_event->getActivityByID($id);
         $signups_min_val = (!empty($env->post('activity')['signups_min_val'])) ? $env->post('activity')['signups_min_val'] : $act->minimal_signups;
         $signups_max_val = (!empty($env->post('activity')['signups_max_val'])) ? $env->post('activity')['signups_max_val'] : $act->maximal_signups;
         $signups_checked = (!empty($env->post('activity')['signups'])) ? $env->post('activity')['signups'] : $act->signups_activated;
@@ -167,7 +167,7 @@ class Activity_Event_Signups {
         $sql = "SELECT * FROM activity_events_signups WHERE event_id = '$activity_id';";
         $db->query($sql);
         if ($db->affected_rows == 0) {
-            $sql = "INSERT INTO activity_events_signups (event_id, minimal_signups_activated, minimal_signups, maximal_signups_activated, maximal_signups, signup_open_beyond_maximal, preference_selection_enabled) VALUES ('$activity_id', '$signups_min', '$signups_min_val', '$signups_max', '$signups_max_val', '$keep_signups_open', '0');";
+            $sql = "INSERT INTO activity_events_signups (event_id, minimal_signups_activated, minimal_signups, maximal_signups_activated, maximal_signups, signup_open_beyond_maximal) VALUES ('$activity_id', '$signups_min', '$signups_min_val', '$signups_max', '$signups_max_val', '$keep_signups_open');";
         } else {
             $sql = "UPDATE activity_events_signups
                         SET 
@@ -175,11 +175,12 @@ class Activity_Event_Signups {
                             minimal_signups = '$signups_min_val',
                             maximal_signups_activated = '$signups_max',
                             maximal_signups = '$signups_max_val',
-                            signup_open_beyond_maximal = '$keep_signups_open',
-                            preference_selection_enabled = '0'
+                            signup_open_beyond_maximal = '$keep_signups_open'
                         WHERE event_id = '$activity_id';";
         }
         if ($db->query($sql)) {
+            $msg = Msg::getInstance();
+            $msg->add('activity_event_content_saved', 'Signups updated!');
             return true;
         }
         return false;
@@ -196,16 +197,18 @@ class Activity_Event_Signups {
             $query = $db->query($sql);        
         } else {
             $signup = TRUE;
-            $sql = "INSERT INTO activity_events_signups_user (event_id, user_id, registration_id, preferred) VALUES ('$event_id', '$user_id', '', '0');";
+            $sql = "INSERT INTO activity_events_signups_user (event_id, user_id) VALUES ('$event_id', '$user_id');";
             $query = $db->query($sql);        
         }
 
         if ($query !== false) {
             $env = Env::getInstance();
-            if (isset($env::$hooks['toggle_event_signup_hook'])) {
-                $env::$hooks['toggle_event_signup_hook']($event_id, $signup);
+            $hooks = $env::getHooks('toggle_event_signup_hook');
+            if ($hooks!== false) {
+                foreach ($hooks as $hook) {
+                    $hook['toggle_event_signup_hook']($event_id, $signup);
+                }
             }
-
             return true;
         }
         return false;
@@ -233,5 +236,6 @@ class Activity_Event_Signups {
         }
     }
 }
-$activity_event_signups = new Activity_Event_Signups();
-$activity_event_signups->initEnv();
+$init_env = new Activity_Event_Signups();
+$init_env->initEnv();
+unset($init_env);

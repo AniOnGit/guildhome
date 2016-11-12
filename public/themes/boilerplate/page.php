@@ -9,6 +9,7 @@
         <link rel="apple-touch-icon" href="apple-touch-icon.png">
         <link rel="stylesheet" href="/themes/boilerplate/css/normalize.min.css">
         <link rel="stylesheet" href="/themes/boilerplate/css/main.css">
+        <link rel="stylesheet" href="/themes/boilerplate/css/sidebar.css">
         <!--[if lt IE 9]>
             <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
             <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
@@ -27,7 +28,7 @@
             </header>
         </div>
         <div class="main-container">
-            <div class="main wrapper clearfix">
+            <div class="wrapper main clearfix">
                 <article>
                     {##main##}
                 </article>

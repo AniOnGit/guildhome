@@ -1,18 +1,6 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of DB
- *
- * @author ecv
- */
 class db {
-
     private static $dbInstance = NULL;
     
     public static $host;
@@ -38,9 +26,7 @@ class db {
     }
 
 }
-
 include_once 'config/db.php';
-
 //config/db.php:
 //<?php
 //db::$host = "";

@@ -1,5 +1,6 @@
 <?php
 class gw2api_Widgets {
+
     function buildSorter($key) {
        return function ($a, $b) use ($key) {
             return strnatcmp($a[$key], $b[$key]);
@@ -78,6 +79,4 @@ class gw2api_Widgets {
         }
         return false;
     }
-        
-
 }

@@ -1,4 +1,5 @@
 <?php
+
 class Settings {
     
     function initEnv() {
@@ -161,6 +162,41 @@ class Settings {
         return $view;
     }
     
+    function getTimezonePickerForm($target_url = '') {
+        $env = Env::getInstance();
+        $view = new View();
+        $view->setTmpl($view->loadFile('/views/settings/timezone_picker_form.php'), array(
+            '{##form_action##}' => '/setting/timezone',
+            '{##target_url##}' => $target_url,
+            '{##timezone_submit_text##}' => 'pick',
+        ));
+        
+        $settings = new Settings();
+        if (($timezone = $settings->getSettingByKey('timezone')) === false) {
+            $option_selected = '';
+        }
+
+        $options_list = '';
+        foreach ($env->generateTimezoneList() as $option_value => $option_text) {
+            $subView = new View();
+            $subView->setTmpl($view->getSubTemplate('{##timezone_select_option##}'));
+            $subView->addContent('{##option_value##}', $option_value);
+            $subView->addContent('{##option_text##}', $option_text);
+            if ($timezone == $option_value) {
+                $subView->addContent('{##option_selected##}', ' selected="selected"');
+            }
+            $subView->replaceTags();
+            $options_list .= $subView;
+        }
+        $view->addContent('{##timezone_select_option##}', $options_list);
+        
+        $view->replaceTags();
+        return $view;
+    }
+    
+
+    
 }
 $settings = new Settings();
 $settings->initEnv();
+unset($settings);

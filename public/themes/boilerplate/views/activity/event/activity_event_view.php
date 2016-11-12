@@ -15,6 +15,7 @@
                 <h3>Signups</h3>
                 <span title="{##activity_signups_list##}">{##activity_signups##}</span>
                 {##activity_detailed_signups_list##}
+                {##activity_tags##}
             </section>
             <section class="description clearfix">
                 <h3>Description</h3>

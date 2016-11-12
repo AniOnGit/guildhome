@@ -1,123 +1,83 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of Profile
- *
- * @author Christian Voigt <chris at notjustfor.me>
- */
 class Profile {
     
     function initEnv() {
         Toro::addRoute(["/profiles" => 'Profile']);
         Toro::addRoute(["/profile/:alpha" => 'Profile']);
-        Toro::addRoute(["/profile/:alpha/:alpha" => 'Profile']);
-        
-        Validation::registerValidation('birthday', array(new Profile(), 'validateBirthday'));
     }
     
-    function get($slug = NULL, $slug2 = NULL) {
+    function get($user_name = NULL) {
         $page = Page::getInstance();
         $login = new Login();
+        $user_id = $this->getUserIDByUsername($user_name);
 
-        if (empty($slug)) {
+        if (is_null($user_id)) {
             $page->setContent('{##main##}', '<h2>Registered Members</h2>');
             $page->addContent('{##main##}', $this->getUsersView());
             $gw2api = new gw2api();
             $page->addContent('{##main##}', $gw2api->getRankUsageFromRosterView());
-        } elseif ($slug == $login->currentUsername() AND $slug2 == 'characters') {
-            $page->setContent('{##main##}', '<h2>Profile</h2>');
-            $gw2api = new gw2api();
-            if ($gw2api->hasApiData('characters')) {
-                $page->addContent('{##main##}', $gw2api->getAccountCharactersView());
-            }
-        } elseif ($slug == $login->currentUsername() AND $slug2 == 'settings') {
-            $db = db::getInstance();
-            $page->setContent('{##main##}', '<h2>Profile</h2>');
-            $view = new View();
-            $view->setTmpl($view->loadFile('/views/profile/profile_settings.php'));
-            $user = $this->getUsers($db->real_escape_string($slug))[0];
-            if (is_object($user)) {
-                if ($user->id == $login->currentUserID()) { // it's-a-me!
-                    $settings = new Settings();
-                    $view->addContent('{##main##}', '<h4>Desired Displayname</h4>');
-                    $view->addContent('{##main##}', $settings->getUpdateSettingForm('display_name', '/profile/' . $user->username . '/settings'));
-                    $view->addContent('{##main##}', "<h4>When's your birthday?</h4>");
-                    $view->addContent('{##main##}', $settings->getUpdateDateForm('birthday', '/profile/' . $user->username . '/settings'));
-                    $view->addContent('{##main##}', '<h4>Change Password</h4>');
-                    $view->addContent('{##main##}', $login->getChangePasswordView());
-                    $view->addContent('{##main##}', '<p>you will be redirected after pressing the button!</p>');
-                    $view->addContent('{##main##}', '<h4>Avatar</h4>');
-                    $view->addContent('{##main##}', '<p>use any image url, only direct links will work...</p>');
-                    $view->addContent('{##main##}', $settings->getUpdateSettingForm('avatar', '/profile/' . $user->username . '/settings'));
-                    $view->addContent('{##main##}', '<hr />');
-                    $view->addContent('{##main##}', '<h3>Development stuff</h3>');
-                    $view->addContent('{##main##}', '<hr />');
-                    $view->addContent('{##main##}', '<p>Stuff in this section is likely to have a lot of errors, use with caution.</p>');
-                    $view->addContent('{##main##}', '<h4>Api</h4>');
-                    $view->addContent('{##main##}', '<p>just copy and paste from your guild wars account page. Only account and guilds are required, characters would be nice.</p>');
-                    $view->addContent('{##main##}', $settings->getUpdateSettingForm('api_key', '/profile/' . $user->username . '/settings'));
-                    
-                    if (gw2api::hasApiData()) {
-                        $gw2api = new gw2api();
-                        $view->addContent('{##main##}', $gw2api->getApiKeyScopeView());
-                        $gw2api_widgets = new gw2api_Widgets();
-                        $view->addContent('{##main##}', $gw2api_widgets->getNextBirthdaysView());
-                    }
-                    $view->addContent('{##main##}', '<h4>Timezone</h4>');
-                    $view->addContent('{##main##}', $this->getTimezonePickerForm('/profile/' . $user->username . '/settings'));
-
-                    $view->addContent('{##main##}', '<h4>Theme</h4>');
-                    $view->addContent('{##main##}', $settings->getUpdateSettingForm('theme_name', '/profile/' . $user->username . '/settings'));
-                }
-            }
-            $view->replaceTags();
-            $page->addContent('{##main##}', $view);
         } else {
-            $db = db::getInstance();
-
             $page->setContent('{##main##}', '<h2>Profile</h2>');
-           
-            $view = new View();
-            $view->setTmpl($view->loadFile('/views/profile/profile_main.php'));
-
-            $user = $this->getUsers($db->real_escape_string($slug))[0];
-            if (is_object($user)) {
-                $subView = new View();
-                $subView->setTmpl($view->getSubTemplate('{##profile_badge##}'));
-                $identity = new Identity();
-                $subView->addContent('{##rank##}', $user->rank_description);
-                $subView->addContent('{##display_name##}', $user->username);
-                $subView->addContent('{##avatar##}', $identity->getAvatarByUserId($user->id));
-
-                if ($user->id == $login->currentUserID()) { // it's-a-me!
-                    $subView->addContent('{##email##}', $user->email);
-                    $settings = new Settings();
-
-                    $gw2api_widgets = new gw2api_Widgets();
-                    if (gw2api::hasApiData('characters')) {
-                        $view->addContent('{##main##}', $gw2api_widgets->getNextBirthdaysView());
-                    }
-
-                    $activity_event_widgets = new Activity_Event_Widgets();
-                    $view->addContent('{##main##}', $activity_event_widgets->getSignupsByUserIdView($login->currentUserID()));
-                }
-                $subView->replaceTags();
-                $view->addContent('{##profile_badge##}', $subView);
-            } else {
-                $view->addContent('{##main##}', 'unknown user');
-            }
-            $view->replaceTags();
-            $page->addContent('{##main##}', $view);
+            $page->addContent('{##main##}', $this->getProfileView($user_id));
         }
+    }
+    
+    function getUserIDByUsername($user_name) {
+        if ($user_name === NULL) {
+            return $user_name;
+        }
+        
+        $db = db::getInstance();
+        $sql = "SELECT users.id FROM users WHERE users.username = '$user_name';";
+        
+        $result = $db->query($sql);
 
+        if ($result->num_rows == 1) {
+            $result_row = $result->fetch_object();
+            return $result_row->id;
+        }
+        return false;
     }
 
+    function getProfileView($user_id) {
+        $login = new Login();
+        $view = new View();
+        $view->setTmpl($view->loadFile('/views/profile/profile_main.php'));
+
+        $user = $this->getUsers($user_id)[0];
+        if (is_object($user)) {
+            $subView = new View();
+            $subView->setTmpl($view->getSubTemplate('{##profile_badge##}'));
+            $identity = new Identity();
+            $subView->addContent('{##rank##}', $user->rank_description);
+            $subView->addContent('{##display_name##}', $user->username);
+            $subView->addContent('{##avatar##}', $identity->getAvatarByUserId($user->id));
+
+            if ($user->id == $login->currentUserID()) { // it's-a-me!
+                $subView->addContent('{##email##}', $user->email);
+
+                $gw2api_widgets = new gw2api_Widgets();
+                if (gw2api::hasApiData('characters')) {
+                    $view->addContent('{##main##}', $gw2api_widgets->getNextBirthdaysView());
+                }
+
+                $activity_event_widgets = new Activity_Event_Signups_Widgets();
+                $view->addContent('{##main##}', $activity_event_widgets->getSignupsByUserIdView($login->currentUserID()));
+            }
+            $subView->replaceTags();
+            $view->addContent('{##profile_badge##}', $subView);
+        } else {
+            $view->addContent('{##main##}', 'unknown user');
+        }
+        $view->replaceTags();
+        return $view;
+    }
+    
+    public function getUserByID($user_id = null) {
+        return $this->getUsers($user_id)[0];
+    }
+    
     public function getUsers($user = null) {
         $db = db::getInstance();
         if (is_null($user)) {
@@ -148,41 +108,8 @@ class Profile {
         }
     }
 
-    function getTimezonePickerForm($target_url = '') {
-        $env = Env::getInstance();
-        $view = new View();
-        $view->setTmpl($view->loadFile('/views/settings/timezone_picker_form.php'), array(
-            '{##form_action##}' => '/setting/timezone',
-            '{##target_url##}' => $target_url,
-            '{##timezone_submit_text##}' => 'pick',
-        ));
-        
-        $settings = new Settings();
-        if (($timezone = $settings->getSettingByKey('timezone')) === false) {
-            $option_selected = '';
-        }
-
-        $options_list = '';
-        foreach ($env->generateTimezoneList() as $option_value => $option_text) {
-            $subView = new View();
-            $subView->setTmpl($view->getSubTemplate('{##timezone_select_option##}'));
-            $subView->addContent('{##option_value##}', $option_value);
-            $subView->addContent('{##option_text##}', $option_text);
-            if ($timezone == $option_value) {
-                $subView->addContent('{##option_selected##}', ' selected="selected"');
-            }
-            $subView->replaceTags();
-            $options_list .= $subView;
-        }
-        $view->addContent('{##timezone_select_option##}', $options_list);
-        
-        $view->replaceTags();
-        return $view;
-        
-    }
-    
     function getProfileUrlById($user_id) {
-        $user = $this->getUsers($user_id)[0];
+        $user = $this->getUserById($user_id);
         return '/profile/' . $user->username;
     }
     
@@ -214,24 +141,7 @@ class Profile {
         return $view;
     }
 
-    function validateBirthday($date = '') {
-        $msg = Msg::getInstance();
-        $error = false;
-        if (!preg_match("/([0-9]{4})\-([0-9]{2})\-([0-9]{2})/", $date, $matches)) {
-            $error = true;
-            $msg->add('birthday_pattern_validation', 'This does not seem to be a valid birthday-date (dd/mm/yyyy)');
-        } else {
-            if (!checkdate($matches[2], $matches[3], $matches[1])) {
-                $error = true;
-                $msg->add('birthday_date_validation', 'This is not a valid date!');
-            }
-        }
-        
-        if ($error === true) {
-            return false;
-        }
-        return true;
-    }
 }
-$profile = new Profile();
-$profile->initEnv();
+$init_env = new Profile();
+$init_env->initEnv();
+unset($init_env);

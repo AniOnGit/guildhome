@@ -18,6 +18,7 @@ class Logger {
     public static function lfile($path) {
         self::$log_file = $path;
     }
+    
     public static function lwrite($message) {
         if (!is_resource(self::$fp)) {
             self::lopen();
@@ -26,9 +27,11 @@ class Logger {
         $time = @date('[D M d G:i:s Y]');
         fwrite(self::$fp, "$time ($script_name) $message" . PHP_EOL);
     }
+    
     public static function lclose() {
         fclose(self::$fp);
     }
+    
     private static function lopen() {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             $log_file_default = 'c:/php/logfile.txt';

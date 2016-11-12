@@ -1,8 +1,8 @@
 <?php
+
 class Activity_Event extends Activity {
     // start controller
     function initEnv() {
-        Toro::addRoute(["/activities/events" => "Activity_Event"]);
         Toro::addRoute(["/activity/event/:alpha/:number" => "Activity_Event"]);
         Toro::addRoute(["/activity/event/:alpha" => "Activity_Event"]);
         
@@ -13,17 +13,17 @@ class Activity_Event extends Activity {
         $env = Env::getInstance();
         $login = new Login();
         $page = Page::getInstance();
-        $page->addContent('{##main##}', parent::activityMenu('event'));
+        $menu = new Menu();
+        $page->addContent('{##main##}', $menu->activityMenu('event', $compact = true));
         switch ($action) {
-            default :
-                $env->clearPost('activity');
-                $page->addContent('{##main##}', $this->getAllActivitiesView('2')); // 2 = event 
-                break;
             case 'details' :
+                if ($event_id === NULL OR !is_numeric($event_id)) {
+                    break;
+                }
                 $page->addContent('{##main##}', '<h2>Event details</h2>');
                 $page->addContent('{##main##}', $this->getActivityView($event_id));
-                $act = new Activity();
-                $comments = new Comment();
+                $act = $this;
+                $comments = new Activity_Comment();
                 if ($login->isLoggedIn() AND $act->commentsEnabled($event_id)) {
                     $page->addContent('{##main##}', $comments->getNewCommentForm($event_id));
                 }
@@ -42,8 +42,8 @@ class Activity_Event extends Activity {
                 }
                 break;
             case 'update' :
-                if (!$login->isLoggedIn()) {
-                    return false;
+                if (!$login->isLoggedIn() AND $event_id === NULL OR !is_numeric($event_id)) {
+                    break;
                 }
                 $page->addContent('{##main##}', '<h2>Update event</h2>');
                 $page->addContent('{##main##}', $this->getActivityForm($event_id));
@@ -52,16 +52,16 @@ class Activity_Event extends Activity {
                 }
                 break;
             case 'delete' :
-                if (!$login->isLoggedIn()) {
+                if (!$login->isLoggedIn() AND $event_id === NULL OR !is_numeric($event_id)) {
                     return false;
                 }
-                $page->addContent('{##main##}', '<h2>Delete event</h2>');
+                $page->addContent('{##main##}', '<h2>Delete event</h2>' . $event_id);
                 $page->addContent('{##main##}', $this->getDeleteActivityForm($event_id));
                 break;
         }
     }
 
-    function post($action, $id = NULL) {
+    function post($action, $event_id = NULL) {
         $env = Env::getInstance();
         $login = new Login();
         if (!$login->isLoggedIn()) {
@@ -69,26 +69,26 @@ class Activity_Event extends Activity {
         }
         switch ($action) {
             case 'new' :
-                if ($this->validateActivity() === true AND !isset($env->post('activity')['preview'])) {
-                    if ($event_id = $this->saveActivity() === true) {
-                        header("Location: /activity/event/update/$event_id");
-                        exit;
-                    }
+                if (isset($env->post('activity')['preview'])) {
+                    unset($env->post('activity')['preview']);
+                } elseif (($event_id = $this->saveActivity('event')) !== false) {
+                    $this->get('update', $event_id);
+                    break;
                 }
-                $this->get('update', $id);
+                $this->get('new', $event_id);    
                 break;
             case 'update' :
-                if ($this->validateActivity() === true AND !isset($env->post('activity')['preview'])) {
-                    if ($this->saveActivity($id) === true) {
-                        header("Location: /activity/event/update/$id");
-                        exit;
-                    }
+                if (isset($env->post('activity')['preview'])) {
+                    unset($env->post('activity')['preview']);
+                } else {
+                    $this->updateActivity($event_id);
                 }
-                $this->get('update', $id);
+                $this->get('update', $event_id);
                 break;
             case 'delete' :
                 if (isset($env->post('activity')['submit']) AND $env->post('activity')['submit'] == 'delete') {
-                    if ($this->deleteActivity($id) === true) {
+                    if ($this->deleteActivity($event_id) !== false) {
+                        $env->clearPost('activity');
                         header("Location: /activities/events");
                         exit;
                     }
@@ -102,10 +102,26 @@ class Activity_Event extends Activity {
     }
     // end controller    
     // start model
-    function getActivity($id) {
+    function getActivityById($id) {
         $db = db::getInstance();
 
-        $sql = "SELECT ae.activity_id AS activity_id, ae.title AS title, ae.description AS description, ae.date AS date, ae.time AS time, a.comments_enabled AS comments_enabled, ae.signups_activated AS signups_activated, a.userid AS userid, aes.event_id AS eventid, aes.minimal_signups_activated AS minimal_signups_activated, aes.minimal_signups AS minimal_signups, aes.maximal_signups_activated AS maximal_signups_activated, aes.maximal_signups AS maximal_signups, aes.signup_open_beyond_maximal AS signup_open_beyond_maximal, aes.class_registration_enabled AS class_registration_enabled,aes.roles_registration_enabled, aes.preference_selection_enabled AS preference_selection_enabled, aet.name AS event_type,
+        $sql = "SELECT
+                    a.comments_enabled AS comments_enabled,
+                    a.userid AS userid,
+                    a.type AS activity_type,
+                    ae.activity_id AS activity_id,
+                    ae.title AS title,
+                    ae.description AS description,
+                    ae.date AS date,
+                    ae.time AS time,
+                    ae.tags_activated AS tags_activated,
+                    ae.signups_activated AS signups_activated,
+                    aes.event_id AS eventid,
+                    aes.minimal_signups_activated AS minimal_signups_activated,
+                    aes.minimal_signups AS minimal_signups,
+                    aes.maximal_signups_activated AS maximal_signups_activated,
+                    aes.maximal_signups AS maximal_signups,
+                    aes.signup_open_beyond_maximal AS signup_open_beyond_maximal,
                     IF(
                         DATE_ADD(concat(ae.date, ' ', ae.time), INTERVAL 2 HOUR) >= NOW()
                     AND
@@ -121,7 +137,6 @@ class Activity_Event extends Activity {
                     FROM activity_events ae
                     LEFT JOIN activities a ON ae.activity_id = a.id
                     LEFT JOIN activity_events_signups aes ON ae.activity_id = aes.event_id
-                    LEFT JOIN activity_events_types aet ON ae.event_type = aet.id
                     WHERE activity_id = '$id';";
 
         $query = $db->query($sql);
@@ -133,51 +148,53 @@ class Activity_Event extends Activity {
         return false;
     }
 
-    function saveActivity($event_id = NULL) { // : event_id : false
+    function saveActivityTypeDetails($event_id) { // : event_id : false
         $db = db::getInstance();
         $env = Env::getInstance();
         $title = $env->post('activity')['title'];
-        $event_type = $env->post('activity')['event_type'];
+        $description = $env->post('activity')['content'];
+        $time = $env->post('activity')['time'];
+        $date = $env->post('activity')['date'];
+        $sql = "INSERT INTO activity_events(activity_id, title, description, date, time) VALUES ($event_id, '$title', '$description', '$date', '$time');";
+        $query = $db->query($sql);
+        if ($query !== false) {
+            $msg = Msg::getInstance();
+            $msg->add('activity_event_content_saved', 'Activity saved!');
+
+            return $event_id;
+        }
+        return false;
+    }
+
+    function updateActivityTypeDetails($event_id) { // : event_id : false
+        $db = db::getInstance();
+        $env = Env::getInstance();
+        $title = $env->post('activity')['title'];
         $description = $env->post('activity')['content'];
         $time = $env->post('activity')['time'];
         $date = $env->post('activity')['date'];
 
-        $allow_comments = isset($env->post('activity')['comments']) ? '1' : '0';
+        $login = new Login();
 
-        if ($event_id === NULL) {
-            $activity_id = $this->save($type = '2', $allow_comments);
-            $sql = "INSERT INTO activity_events(activity_id, event_type, title, description, date, time) VALUES ($activity_id, '$event_type', '$title', '$description', '$date', '$time');";
-            $query = $db->query($sql);
-            if ($query !== false) {
-                return $db->insert_id;
-            }
-        } else {
-            $login = new Login();
+        $userid = $login->currentUserID();
+        $act = $this->getActivityById($event_id);
 
-            $userid = $login->currentUserID();
-            $actid = $this->getActivity($event_id)->userid;
+        if ($userid != $act->userid) {
+            return false;
+        }
 
-            if ($userid != $actid) {
-                return false;
-            }
+        $sql = "UPDATE activity_events SET
+                        title = '$title',
+                        description = '$description',
+                        time = '$time',
+                        date = '$date'
+                    WHERE activity_id = '$event_id';";
+        $query = $db->query($sql);
 
-            $sql = "UPDATE activities SET
-                            comments_enabled= '$allow_comments'
-                        WHERE id = '$event_id';";
-            $query = $db->query($sql);
-
-            $sql = "UPDATE activity_events SET
-                            title = '$title',
-                            event_type = '$event_type',
-                            description = '$description',
-                            time = '$time',
-                            date = '$date'
-                        WHERE activity_id = '$event_id';";
-            $query = $db->query($sql);
-
-            if ($db->affected_rows > 0 OR $query !== false) {
-                return $event_id;
-            }
+        if ($db->affected_rows > 0 OR $query !== false) {
+            $msg = Msg::getInstance();
+            $msg->add('activity_event_content_saved', 'Activity updated!');
+            return $event_id;
         }
         return false;
     }
@@ -191,31 +208,7 @@ class Activity_Event extends Activity {
         return true;
     }
     
-    function deleteActivity($activity_id) {
-        $db = db::getInstance();
-        $env = Env::getInstance();
-        $login = new Login();
-
-        $userid = $login->currentUserID();
-        $actid = $this->getActivity($activity_id)->userid;
-        if ($userid != $actid) {
-            return false;
-        }
-
-        $sql = "UPDATE activities SET deleted = '1' WHERE id = '$activity_id';";
-
-        $query = $db->query($sql);
-        if ($query !== false) {
-            $env->clearPost('activity');
-            if (isset($env::$hooks['delete_event_hook'])) {
-                $env::$hooks['delete_event_hook']($activity_id);
-            }
-            return true;
-        }
-        return false;
-    }
-
-    function validateActivity() {
+    function validateActivityTypeDetails() {
         $msg = Msg::getInstance();
         $env = Env::getInstance();
 
@@ -272,7 +265,7 @@ class Activity_Event extends Activity {
         return $view;
     }
     
-    function getActivityView($event_id = NULL, $compact = NULL) {
+    public function getActivityView($event_id = NULL, $compact = NULL) {
         $env = Env::getInstance();
         $activityView = new View();
         $activityView->setTmpl($activityView->loadFile('/views/activity/event/activity_event_view.php'));
@@ -280,7 +273,13 @@ class Activity_Event extends Activity {
         $loopView = new View();
         $loopView->setTmpl($activityView->getSubTemplate('{##activity_loop##}'));
 
-        $act_meta = parent::getActivityById($event_id);
+        $act = $this->getActivityById($event_id);
+        $act_meta = parent::getActivityMetaById($event_id);
+        
+        if ($act === false OR $act_meta->type != '2') {
+            return false;
+        }
+
         if (isset($act_meta->create_time)) {
             $loopView->addContent('{##activity_published##}', $act_meta->create_time);
         }
@@ -288,7 +287,6 @@ class Activity_Event extends Activity {
             $loopView->addContent('{##activity_type##}',  $act_meta->type_description);
         }
 
-        $act = $this->getActivity($event_id);
         if ($act->featured === 'true') {
             $loopView->addContent('{##css##}', ' pulled_to_top');
         }
@@ -329,7 +327,7 @@ class Activity_Event extends Activity {
         }
 
         if (isset($act->comments_enabled) AND $act->comments_enabled == '1') {
-            $comment = new Comment();
+            $comment = new Activity_Comment();
             $comment_count = $comment->getCommentCount($event_id);
             $visitorView = new View();
             $visitorView->setTmpl($loopView->getSubTemplate('{##activity_not_logged_in##}'));
@@ -348,8 +346,11 @@ class Activity_Event extends Activity {
             $loopView->addContent('{##activity_logged_in##}',  $memberView);
         }
 
-        if (isset($env::$hooks['activity_event_view_hook'])) {
-            $env::$hooks['activity_event_view_hook']($loopView, $act, $event_id, $compact);
+        $hooks = $env::getHooks('activity_event_view_hook');
+        if ($hooks!== false) {
+            foreach ($hooks as $hook) {
+                $hook['activity_event_view_hook']($loopView, $act, $event_id, $compact);
+            }
         }
 
         $loopView->replaceTags();
@@ -368,6 +369,7 @@ class Activity_Event extends Activity {
         $view->setTmpl($view->loadFile('/views/activity/event/activity_event_form.php'), array(
             '{##preview_text##}' => 'Preview',
             '{##draft_text##}' => 'Save as draft',
+            '{##activity_event_content_saved##}' => $msg->fetch('activity_event_content_saved', 'success'),
             '{##activity_title_validation##}' => $msg->fetch('activity_event_title_validation'),
             '{##activity_content_validation##}' => $msg->fetch('activity_event_content_validation'),
             '{##activity_date_validation##}' => $msg->fetch('activity_event_date_validation'),
@@ -385,9 +387,9 @@ class Activity_Event extends Activity {
             $comments_checked = (!empty($env->post('activity')['comments']) AND $env->post('activity')['comments'] !== NULL) ? '1' : '';
         } else {
             $view->addContent('{##form_action##}', '/activity/event/update/' . $event_id);
-            $view->addContent('{##submit_text##}' , 'Update');
+            $view->addContent('{##submit_text##}', 'Update');
 
-            $act = $this->getActivity($event_id);
+            $act = $this->getActivityById($event_id);
 
             $title = (!empty($env->post('activity')['title'])) ? $env->post('activity')['title'] : $act->title;
             $content = (!empty($env->post('activity')['content'])) ? $env->post('activity')['content'] : $act->description;
@@ -395,22 +397,21 @@ class Activity_Event extends Activity {
             $time = (isset($env->post('activity')['time'])) ? $env->post('activity')['time'] : $act->time;
             $comments_checked = (!empty($env->post('activity')['comments'])) ? $env->post('activity')['comments'] : $act->comments_enabled;
 
-            if (isset($env::$hooks['event_roles'])) {
-                $event_data = $env::$hooks['event_roles']($event_id);
-                $view->addContent('{##class_selection_form##}', $event_data);
-            }
-
-            if (isset($env::$hooks['event_signups'])) {
-                $event_data = $env::$hooks['event_signups']($event_id);
-                $view->addContent('{##signups_form##}', $event_data);
+            $hooks = $env::getHooks('activity_event_form_hook');
+            if ($hooks!== false) {
+                foreach ($hooks as $hook) {
+                    $event_data = $hook['activity_event_form_hook']($event_id);
+                    $view->addContent('{##signups_form##}', $event_data);
+                }
             }
         }
         
-        $view->addContent('{##activity_title##}' , $title);
-        $view->addContent('{##activity_content##}' , $content);
-        $view->addContent('{##activity_date##}' , $date);
-        $view->addContent('{##activity_time##}' , $time);
-        $view->addContent('{##activity_comments_checked##}' , ($comments_checked === '1') ? 'checked="checked"' : '');
+        $view->addContent('{##activity_title##}', $title);
+        $content = str_replace("\n\r", "&#13;", $content);
+        $view->addContent('{##activity_content##}', $content);
+        $view->addContent('{##activity_date##}', $date);
+        $view->addContent('{##activity_time##}', $time);
+        $view->addContent('{##activity_comments_checked##}', ($comments_checked === '1') ? 'checked="checked"' : '');
 
         $view->replaceTags();
         return $view;
@@ -418,7 +419,7 @@ class Activity_Event extends Activity {
     
     function getDeleteActivityForm($id = NULL) {
         if ($id !== NULL) {
-            $act = $this->getActivity($id);
+            $act = $this->getActivityById($id);
             $content = $act->title . "<br />" . $act->description;
         } else {
             $content = '';
@@ -435,7 +436,11 @@ class Activity_Event extends Activity {
         return $view;
     }
 
+    function createActivityTypeDatabaseTables($overwriteIfExists = false) {
+        return true;
+    }
 }
 // end view
-$activity_event = new Activity_Event();
-$activity_event->initEnv();
+$init_env = new Activity_Event();
+$init_env->initEnv();
+unset($init_env);

@@ -69,11 +69,17 @@ $activity_event_widgets = new Activity_Event_Widgets();
 $page->addContent('{##widgets##}', '<hr />');
 $page->addContent('{##widgets##}', $activity_event_widgets->getUpcomingActivitiesView());
 
+$login  = new Login();
+if ($login->isLoggedIn()) {
+    $page->addContent('{##widgets##}', '<hr />');
+    $page->addContent('{##widgets##}', '<a href="ts3server://ts3.notjustfor.me?port=9987&password=LederhosenBier">Awesome EoL TS3 Server</a>');
+}
+
 $page->addContent('{##footer##}', '<p>created by the community: for the community</p>');
 $page->addContent('{##footer##}', '<p>');
-$page->addContent('{##footer##}', View::linkFab('/impressum', 'imprint (german)'));
+$page->addContent('{##footer##}', View::linkFab('/pages/view/impressum', 'imprint (german)'));
 $page->addContent('{##footer##}', ' | ');
-$page->addContent('{##footer##}', View::linkFab('/datenschutz', 'online-privacy (german)'));
+$page->addContent('{##footer##}', View::linkFab('/pages/view/datenschutz', 'online-privacy (german)'));
 $page->addContent('{##footer##}', '</p>');
 
 /*

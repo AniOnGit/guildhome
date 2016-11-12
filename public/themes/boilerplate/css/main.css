@@ -92,8 +92,6 @@ body {
   transform: translateY(4px);
 }
 
-
-
 .header-container {
     border-bottom: 20px solid #EA6C12;
 }
@@ -109,20 +107,6 @@ body {
 .header-container,
 .footer-container {
     background: #EDA73E;
-}
-
-aside {
-    background: #ffffff;
-    color: #EA6C12;
-}
-
-aside ul {
-    padding: 0;
-    list-style-type: none;
-}
-
-aside ul li {
-    clear: both;
 }
 
 .title {
@@ -494,15 +478,6 @@ nav.activities li:hover div.action:hover {
     font-size: 1.25em;
 }
 
-/* Start of "Micro clearfix" */
-
-    .clearfix { zoom: 1; }
-    .clearfix:before,
-    .clearfix:after { content: ""; display: table; }
-    .clearfix:after { clear: both; }
-
-/* End of "Micro clearfix" */
-
 aside a {
     text-decoration: none;
 }
@@ -570,6 +545,12 @@ span[type="validation"] {
     background-color: #ffcccc;
 }
 
+span[type="success"] {
+    display: block;
+    clear: both;
+    background-color: #ccffcc;
+}
+
 section.widget ul {
     margin: 0; padding: 0;
     list-style-type: none; 
@@ -590,16 +571,12 @@ aside section.widget time {
     float: right;
 }
 
-
-/* ==========================================================================
-   Media Queries
-   ========================================================================== */
+.clearfix { zoom: 1; }
+.clearfix:before,
+.clearfix:after { content: ""; display: table; }
+.clearfix:after { clear: both; }
 
 @media only screen and (min-width: 480px) {
-
-/* ====================
-    INTERMEDIATE: Menu
-   ==================== */
 
     .header-container nav a {
         float: left;
@@ -617,10 +594,6 @@ aside section.widget time {
         margin-right: 0;
     }
 
-/* ========================
-    INTERMEDIATE: IE Fixes
-   ======================== */
-
     .header-container nav ul li {
         display: inline;
     }
@@ -632,20 +605,12 @@ aside section.widget time {
 
 @media only screen and (min-width: 768px) {
 
-/* ====================
-    WIDE: CSS3 Effects
-   ==================== */
-
     .header-container,
     .main aside {
         -webkit-box-shadow: 0 5px 10px #aaa;
            -moz-box-shadow: 0 5px 10px #aaa;
                 box-shadow: 0 5px 10px #aaa;
     }
-
-/* ============
-    WIDE: Menu
-   ============ */
 
     .title {
         float: left;
@@ -655,10 +620,6 @@ aside section.widget time {
         float: right;
         width: 38%;
     }
-
-/* ============
-    WIDE: Main
-   ============ */
 
     .main > article {
         float: left;
@@ -673,69 +634,14 @@ aside section.widget time {
 
 @media only screen and (min-width: 1140px) {
 
-/* ===============
-    Maximal Width
-   =============== */
-
     .wrapper {
-        width: 1026px; /* 1140px - 10% for margins */
+        width: 1026px;
         margin: 0 auto;
     }
 }
 
-/* ==========================================================================
-   Helper classes
-   ========================================================================== */
-
-.hidden {
-    display: none !important;
-    visibility: hidden;
-}
-
-.visuallyhidden {
-    border: 0;
-    clip: rect(0 0 0 0);
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    padding: 0;
-    position: absolute;
-    width: 1px;
-}
-
-.visuallyhidden.focusable:active,
-.visuallyhidden.focusable:focus {
-    clip: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    position: static;
-    width: auto;
-}
-
-.invisible {
-    visibility: hidden;
-}
-
-.clearfix:before,
-.clearfix:after {
-    content: " ";
-    display: table;
-}
-
-.clearfix:after {
-    clear: both;
-}
-
-.clearfix {
-    *zoom: 1;
-}
-
-/* ==========================================================================
-   Print styles
-   ========================================================================== */
-
 @media print {
+    
     *,
     *:before,
     *:after {

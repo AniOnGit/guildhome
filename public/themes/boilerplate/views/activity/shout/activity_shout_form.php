@@ -1,6 +1,7 @@
 <section class="form">
     <p>Tell your guildmates what you are up to.</p>
     <form method="post" action="{##form_action##}">
+        {##activity_shout_content_saved##}
         <fieldset>
             <legend>Tell us</legend>
             <label for="activity_content">{##activity_content_text##}</label>
