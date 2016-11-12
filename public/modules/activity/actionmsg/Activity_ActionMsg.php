@@ -1,18 +1,18 @@
 <?php
 
-class Activity_ActionMsg extends Activity {
+class Activity_ActionMsg extends Activity implements IDatabaseModel {
 
     function initEnv() {
         // hooks for the various places where messages can be implemented
-        Env::registerHook('save_comment_hook', array(new Activity_ActionMsg(), 'saveCommentAction'));
-        Env::registerHook('save_new_user_hook', array(new Activity_ActionMsg(), 'saveNewUserAction'));
-        Env::registerHook('toggle_event_signup_hook', array(new Activity_ActionMsg(), 'toggleEventSignupAction'));
-        Env::registerHook('delete_activity_hook', array(new Activity_ActionMsg(), 'deleteEventAction'));
-        
+        Env::registerHook('save_comment_hook', array(new Activity_ActionMsg(),'saveCommentAction'));
+        Env::registerHook('save_new_user_hook', array(new Activity_ActionMsg(),'saveNewUserAction'));
+        Env::registerHook('toggle_event_signup_hook', array(new Activity_ActionMsg(),'toggleEventSignupAction'));
+        Env::registerHook('delete_activity_hook', array(new Activity_ActionMsg(),'deleteEventAction'));
+
         // hook for the activity module
-        Env::registerHook('actionmessage', array(new Activity_ActionMsg(), 'getActivityView'));
+        Env::registerHook('actionmessage', array(new Activity_ActionMsg(),'getActivityView'));
     }
-    
+
     function getActivityById($id = NULL) {
         $db = db::getInstance();
         $sql = "SELECT activity_actionmsg.*, from_unixtime(activities.create_time, '%Y-%m-%d') AS create_date,
@@ -24,16 +24,15 @@ class Activity_ActionMsg extends Activity {
                     LIMIT 1;";
         $query = $db->query($sql);
 
-        if ($query !== false AND $query->num_rows >= 1) {
+        if ($query !== false and $query->num_rows >= 1) {
             while ($result_row = $query->fetch_object()) {
                 $activity = $result_row;
             }
             return $activity;
         }
         return false;
-        
     }
-    
+
     public function getActivityView($id = NULL, $compact = NULL) {
         $view = new View();
         $view->setTmpl($view->loadFile('/views/activity/actionmsg/activity_actionmsg_view.php'));
@@ -43,26 +42,30 @@ class Activity_ActionMsg extends Activity {
         $message = 'at ' . $actionmsg->create_time . ', ';
         $message .= $actionmsg->message;
         if (isset($actionmsg->related_activity_id)) {
-            $message .= ' (<a href="/comment/activity/view/'.$actionmsg->related_activity_id.'">view</a>)';
+            $message .= ' (<a href="/comment/activity/view/' . $actionmsg->related_activity_id . '">view</a>)';
         }
         $view->setContent('{##action_message##}', $message);
         $view->replaceTags();
 
-        return $view;    
+        return $view;
     }
     private $message = '';
+
     function setMessage($message) {
         $this->message = $message;
         return $this;
     }
+
     function getMessage() {
         return $this->message;
     }
     private $related_activity = null;
+
     function setRelatedActivityID($activity_id) {
         $this->related_activity = $activity_id;
         return $this;
     }
+
     function getRelatedActivityID() {
         return $this->related_activity;
     }
@@ -75,9 +78,11 @@ class Activity_ActionMsg extends Activity {
 
         $activity = parent::getActivityMetaById($activity_id);
 
-        $message  = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
+        $message = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
         $message .= ' commented on ' . $activity->type_description;
-        $this->setMessage($message)->setRelatedActivityID($activity_id)->saveActivity('actionmessage'); // save metadata as action messages are activities
+        $this->setMessage($message)
+            ->setRelatedActivityID($activity_id)
+            ->saveActivity('actionmessage'); // save metadata as action messages are activities
     }
 
     function deleteEventAction($activity_id = NULL) {
@@ -88,10 +93,12 @@ class Activity_ActionMsg extends Activity {
 
         $activity = parent::getActivityMetaById($activity_id);
 
-        $message  = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
+        $message = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
         $message .= ' deleted ' . $activity->type_description;
-    
-        $this->setMessage($message)->setRelatedActivityID($activity_id)->saveActivity('actionmessage'); // save metadata as action messages are activities
+
+        $this->setMessage($message)
+            ->setRelatedActivityID($activity_id)
+            ->saveActivity('actionmessage'); // save metadata as action messages are activities
     }
 
     function toggleEventSignupAction($activity_id = NULL, $signup = FALSE) {
@@ -102,33 +109,35 @@ class Activity_ActionMsg extends Activity {
 
         $activity = parent::getActivityMetaById($activity_id);
 
-        $message  = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
+        $message = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id) . '</a>';
         if ($signup === TRUE) {
             $message .= ' signed up for ' . $activity->type_description;
         } else {
             $message .= ' signed out from ' . $activity->type_description;
         }
-        $this->setMessage($message)->setRelatedActivityID($activity_id)->saveActivity('actionmessage'); // save metadata as action messages are activities
+        $this->setMessage($message)
+            ->setRelatedActivityID($activity_id)
+            ->saveActivity('actionmessage'); // save metadata as action messages are activities
     }
 
     function saveNewUserAction($user_id = NULL) {
         $identity = new Identity();
         $profile = new Profile();
-        
+
         $message = '<a href="' . $profile->getProfileUrlById($user_id) . '">' . $identity->getIdentityById($user_id, 0) . '</a>' . ' created an account';
         $this->setMessage($message)->saveActivity('actionmessage'); // save metadata as action messages are activities
     }
-    
+
     function saveActivityTypeDetails($activity_id) {
         $db = db::getInstance();
         $related_activity_id = $this->getRelatedActivityID();
         $message = $this->getMessage();
         $sql = "INSERT INTO activity_actionmsg (activity_id, message, related_activity_id) VALUES ($activity_id, '$message', $related_activity_id);";
-        $db->query($sql);        
+        $db->query($sql);
 
         return $this;
     }
-    
+
     function updateActivityTypeDetails($activity_id) {
         return $this;
     }
@@ -137,8 +146,17 @@ class Activity_ActionMsg extends Activity {
         return true;
     }
 
-    function createActivityTypeDatabaseTables($overwriteIfExists = false) {
-        return true;
+    function createDatabaseTables($overwriteIfExists) {
+        $db = db::getInstance();
+
+        if ($overwriteIfExists) {
+            $sqlDropExistingActivityTables = "DROP TABLE IF EXISTS activity_actionmsg";
+            $db->query($overwriteIfExists);
+        }
+
+        $sqlActivityTypesTable = "CREATE TABLE `activity_actionmsg` (`activity_id` int(11) NOT NULL,`message` text NOT NULL,
+            `related_activity_id` int(11) DEFAULT NULL,PRIMARY KEY (`activity_id`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
+        $db->query($sqlActivityTypesTable);
     }
 }
 $init_env = new Activity_ActionMsg();
