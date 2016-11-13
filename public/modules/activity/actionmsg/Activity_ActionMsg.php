@@ -4,13 +4,13 @@ class Activity_ActionMsg extends Activity implements IDatabaseModel {
 
     function initEnv() {
         // hooks for the various places where messages can be implemented
-        Env::registerHook('save_comment_hook', array(new Activity_ActionMsg(),'saveCommentAction'));
-        Env::registerHook('save_new_user_hook', array(new Activity_ActionMsg(),'saveNewUserAction'));
-        Env::registerHook('toggle_event_signup_hook', array(new Activity_ActionMsg(),'toggleEventSignupAction'));
-        Env::registerHook('delete_activity_hook', array(new Activity_ActionMsg(),'deleteEventAction'));
+        Env::registerHook('save_comment_hook', array(new Activity_ActionMsg(), 'saveCommentAction'));
+        Env::registerHook('save_new_user_hook', array(new Activity_ActionMsg(), 'saveNewUserAction'));
+        Env::registerHook('toggle_event_signup_hook', array(new Activity_ActionMsg(), 'toggleEventSignupAction'));
+        Env::registerHook('delete_activity_hook', array(new Activity_ActionMsg(), 'deleteEventAction'));
 
         // hook for the activity module
-        Env::registerHook('actionmessage', array(new Activity_ActionMsg(),'getActivityView'));
+        Env::registerHook('actionmessage', array(new Activity_ActionMsg(), 'getActivityView'));
     }
 
     function getActivityById($id = NULL) {
@@ -24,7 +24,7 @@ class Activity_ActionMsg extends Activity implements IDatabaseModel {
                     LIMIT 1;";
         $query = $db->query($sql);
 
-        if ($query !== false and $query->num_rows >= 1) {
+        if ($query !== false AND $query->num_rows >= 1) {
             while ($result_row = $query->fetch_object()) {
                 $activity = $result_row;
             }

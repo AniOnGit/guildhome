@@ -32,7 +32,7 @@ abstract class Activity extends Pagination {
                     LIMIT 1;";
         $query = $db->query($sql);
 
-        if ($query !== false and $query->num_rows == 1) {
+        if ($query !== false AND $query->num_rows == 1) {
             $result = $query->fetch_object();
             return $result;
         }
@@ -58,7 +58,7 @@ abstract class Activity extends Pagination {
                         from_unixtime(create_time) >= DATE_SUB(CURDATE(), INTERVAL 10 DAY);";
         $query = $db->query($sql);
 
-        if ($query !== false and $query->num_rows == 1) {
+        if ($query !== false AND $query->num_rows == 1) {
             $count = $query->fetch_object();
             return $count;
         }
@@ -83,7 +83,7 @@ abstract class Activity extends Pagination {
                         activity_types.name_plural = '$type_name'
                     LIMIT 1;";
         $query = $db->query($sql);
-        if ($query !== false and $query->num_rows == 1) {
+        if ($query !== false AND $query->num_rows == 1) {
             $result = $query->fetch_object();
             return $result->type;
         }
@@ -163,7 +163,7 @@ abstract class Activity extends Pagination {
         $db = db::getInstance();
         $sql = "SELECT comments_enabled FROM activities WHERE id = '$activity_id';";
         $query = $db->query($sql);
-        if ($query !== false and $query->num_rows >= 1) {
+        if ($query !== false AND $query->num_rows >= 1) {
             $result_row = $query->fetch_object();
             $result = ($result_row->comments_enabled == '1') ? true : false;
             return $result;

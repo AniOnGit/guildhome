@@ -1,19 +1,17 @@
 <?php
-
 /*
  * absolute bare activity-submodule
  * all essential parts are used here to integrate stuff into the website
  * i didn't use templates here (except the global one called as static) to
  * keep it simple and obvious
  * we are using
- * - routes, to integrate the module into the website
- * - get() function to handle requests
+ *  - routes, to integrate the module into the website
+ *  - get() function to handle requests
  * we re not using the update and other functions for now,
  *
- * this is just a hello world
+ *              this is just a hello world
  */
 class Activity_Example extends Activity implements IDatabaseModel {
-
     function initEnv() {
         Toro::addRoute(["/activity/example" => "Activity_Example"]);
         Toro::addRoute(["/activity/example/:string" => "Activity_Example"]);

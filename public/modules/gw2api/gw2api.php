@@ -3,17 +3,10 @@
 class gw2api {
 
     function initEnv() {
-        Toro::addRoute([
-            "/gw2api" => "gw2api"
-        ]);
-        Toro::addRoute([
-            "/gw2api/:alpha" => "gw2api"
-        ]);
+        Toro::addRoute(["/gw2api" => "gw2api"]);
+        Toro::addRoute(["/gw2api/:alpha" => "gw2api"]);
 
-        Validation::registerValidation('api_key', array(
-            new gw2api(),
-            'validateApiKey'
-        ));
+        Validation::registerValidation('api_key', array(new gw2api(), 'validateApiKey'));
     }
 
     function get($slug = '') {
@@ -32,7 +25,7 @@ class gw2api {
                 if ($login->isOperator()) {
                     if ($api_key !== false) {
                         $permissions = $this->getApiKeyScope();
-                        if (is_array($permissions) and in_array('guilds', $permissions)) {
+                        if (is_array($permissions) AND in_array('guilds', $permissions)) {
                             $page->addContent('{##main##}', $settings->getUpdateSettingForm('main_guild_id', '/gw2api'));
                             $page->addContent('{##main##}', $this->getUpdateRosterForm());
                         }
@@ -55,7 +48,7 @@ class gw2api {
         }
     }
 
-    function post_xhr($slug) {
+    function post_xhr ($slug) {
         $login = new Login();
         $env = Env::getInstance();
 
@@ -70,11 +63,11 @@ class gw2api {
         $settings = new Settings();
         if (($api_data = $settings->getSettingByKey('gw2apidata')) !== false) {
             $created = new DateTime(json_decode($api_data, true)['created']);
-            echo '(You have local data, imported on ' . $created->format("Y-m-d H:i:s") . ')';
+            echo '(You have local data, imported on ' . $created->format("Y-m-d H:i:s").')';
         } else {
             echo 'Nothing fetched yet';
         }
-        exit();
+        exit;
     }
 
     function post($slug = '') {
@@ -114,21 +107,16 @@ class gw2api {
 
         $api_tokeninfo = $this->gw2apiRequest('/v2/tokeninfo', $key);
 
-        if (! isset($api_tokeninfo['permissions']) or ! is_array($api_tokeninfo['permissions'])) {
+        if (!isset($api_tokeninfo['permissions']) OR !is_array($api_tokeninfo['permissions'])) {
             $msg->add('setting_api_key_validation', 'Not a valid API-Key?');
             $error = 1;
         } else {
             $api_permissions = $api_tokeninfo['permissions'];
-            if (! in_array('account', $api_permissions)) {
+            if (!in_array('account', $api_permissions)) {
                 $msg->add('setting_api_key_validation', 'Enable at least the "account" scope in your Api-Key.');
                 $error = 1;
             }
-            $test = array_intersect([
-                'inventories',
-                'wallet',
-                'builds',
-                'tradingpost'
-            ], $api_permissions);
+            $test = array_intersect(['inventories', 'wallet', 'builds', 'tradingpost'], $api_permissions);
             if (count($test) != 0) {
                 $msg->add('setting_api_key_validation', 'Please restrict your Api-Key to "account", "characters" and "guilds", thank you.');
                 $error = 1;
@@ -154,32 +142,32 @@ class gw2api {
         }
         $api_data['permissions'] = $api_permissions;
         foreach ($api_permissions as $permission) {
-            ${'api_' . $permission} = $this->gw2apiRequest('/v2/' . $permission, $gw2apikey);
+            ${'api_' . $permission} =  $this->gw2apiRequest('/v2/' . $permission, $gw2apikey);
         }
 
-        if (isset($api_characters) and is_array($api_characters)) {
+        if (isset($api_characters) AND is_array($api_characters)) {
             foreach ($api_characters as $key => $value) {
                 $characters[$key] = $this->gw2apiRequest('/v2/characters/' . rawurlencode($value), $gw2apikey);
-                if (! empty($characters[$key]['guild'])) {
+                if (!empty($characters[$key]['guild'])) {
                     $characters[$key]['guild'] = $this->gw2apiRequest('/v1/guild_details.json?guild_id=' . $characters[$key]['guild'])['guild_name'];
                 }
                 $oDateNow = new DateTime();
                 $oDateBirth = new DateTime($characters[$key]['created']);
                 $oDateIntervall = $oDateNow->diff($oDateBirth, true);
                 $characters[$key]['age'] = $oDateIntervall->format('%a');
-                $birthday = new DateTime(date('Y-m-d', mktime(0, 0, 0, date("m"), date("d") - $characters[$key]["age"], date("Y"))));
+                $birthday = new DateTime(date('Y-m-d', mktime(0, 0, 0, date("m") , date("d") - $characters[$key]["age"], date("Y"))));
                 $characters[$key]['birthday'] = $birthday->format("Y-m-d");
             }
             $api_data['characters'] = $characters;
         }
 
-        if (isset($api_account) and is_array($api_account)) {
+        if (isset($api_account) AND is_array($api_account)) {
             $api_data['account'] = $api_account;
             if (is_array($api_account['guilds'])) {
                 foreach ($api_account['guilds'] as $key => $guild) {
                     $api_data['guilds'][$key] = $this->gw2apiRequest('/v2/guild/' . $guild);
                     $login = new Login();
-                    if ($login->isLoggedIn() and $login->isAdmin()) {
+                    if ($login->isLoggedIn() AND $login->isAdmin()) {
                         $api_data['guilds'][$key]['roster'] = $this->gw2apiRequest('/v2/guild/' . $guild . '/members', $gw2apikey);
                     }
                 }
@@ -212,7 +200,7 @@ class gw2api {
                     return true;
                 }
             } else {
-                if (isset($api_data[$section]) and ! empty($api_data[$section])) {
+                if (isset($api_data[$section]) AND !empty($api_data[$section])) {
                     return true;
                 }
             }
@@ -253,7 +241,7 @@ class gw2api {
         }
         $api_data = json_decode($api_data, true);
 
-        if (is_array($api_data['permissions']) === false or ! in_array('account', $api_data['permissions'])) {
+        if (is_array($api_data['permissions']) === false OR !in_array('account', $api_data['permissions'])) {
             return false;
         }
         if ($settings->updateSetting('gw2_account', $api_data['account']['name']) === false) {
@@ -320,13 +308,14 @@ class gw2api {
         return false;
     }
 
+
     function extractRosterFromDump() {
         $settings = new Settings();
         $roster = json_decode($settings->getSettingByKey('gw2apidata'), true);
         $roster = $roster['guilds'][0]['roster'];
         foreach ($roster as $member) {
             $account = $member['name'];
-            $rank = $member['rank'];
+            $rank =  $member['rank'];
             $values[] = "('$account', '$rank')";
         }
         $values = implode(',', $values);
@@ -350,7 +339,7 @@ class gw2api {
         $sql = "SELECT guild_rank, COUNT(*) as rank_count FROM api_roster GROUP BY guild_rank ORDER BY FIELD(guild_rank, 'Member', 'Chieftain', 'Officer', 'Leader') DESC, rank_count;";
 
         $query = $db->query($sql);
-        if ($query !== false and $query->num_rows >= 1) {
+        if ($query !== false AND $query->num_rows >= 1) {
             while ($result_row = $query->fetch_object()) {
                 $rank_usage[] = $result_row;
             }
@@ -392,7 +381,7 @@ class gw2api {
         $sql = "SELECT * FROM api_roster ORDER BY FIELD(guild_rank, 'Member', 'Chieftain', 'Officer', 'Leader') DESC, guild_rank;";
 
         $query = $db->query($sql);
-        if ($query !== false and $query->num_rows >= 1) {
+        if ($query !== false AND $query->num_rows >= 1) {
             while ($result_row = $query->fetch_object()) {
                 $roster[] = $result_row;
             }
@@ -433,7 +422,7 @@ class gw2api {
         $characters = json_decode($settings->getSettingByKey('gw2apidata'), true);
         $msg = Msg::getInstance();
 
-        if (isset($characters['characters']) and is_array($characters['characters'])) {
+        if (isset($characters['characters']) AND is_array($characters['characters'])) {
             foreach ($characters['characters'] as $character) {
                 $name = $character['name'];
                 $race = $character['race'];
@@ -445,7 +434,7 @@ class gw2api {
                 $created = new DateTime($character['created']);
                 $deaths = $character['deaths'];
 
-                if (! isset($character['birthday'])) {
+                if (!isset($character['birthday'])) {
                     $birthday = new DateTime();
                     $msg->add('api_data_outdated', 'Your api-data seems to be outdated. Please re-import your api data!');
                 } elseif (is_array($character['birthday'])) {
@@ -464,7 +453,7 @@ class gw2api {
 
                 $now = new DateTime();
                 if ($next_birthday < $now) {
-                    $next_birthday->setDate(date("Y") + 1, $birthday->format("m"), $birthday->format("d"));
+                    $next_birthday->setDate(date("Y") +1, $birthday->format("m"), $birthday->format("d"));
                 }
 
                 $days_to_next_birthday = $next_birthday->diff($now);
@@ -480,14 +469,16 @@ class gw2api {
                     'birthday' => $birthday->format("Y-m-d"),
                     'birthday_in' => $days_to_next_birthday->days,
                     'created' => $created->format("Y-m-d"),
-                    'deaths' => $deaths
+                    'deaths' => $deaths,
                 );
+
             }
 
             return $characters_modified;
         } else {
             return false;
         }
+
     }
 
     function getAccountCharactersView() {
@@ -533,13 +524,13 @@ class gw2api {
 
         if ($api_key != "") {
             $pattern = "/^[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{20}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}$/";
-            if (! preg_match($pattern, $api_key)) {
+            if (!preg_match($pattern, $api_key)) {
                 return false;
             }
         }
 
         $url = parse_url('https://api.guildwars2.com' . $request);
-        if (! $fp = @fsockopen('ssl://' . $url['host'], 443, $errno, $errstr, 5)) {
+        if (!$fp = @fsockopen('ssl://' . $url['host'], 443, $errno, $errstr, 5)) {
             $log::lwrite("$errstr ($errno)");
             return false;
         }
@@ -549,7 +540,7 @@ class gw2api {
 
         $header = 'GET ' . $url['path'] . $query . ' HTTP/1.1' . $nl;
         $header .= 'Host: ' . $url['host'] . $nl;
-        $header .= ! empty($api_key) ? 'Authorization: Bearer ' . $api_key . $nl : '';
+        $header .= !empty($api_key) ? 'Authorization: Bearer ' . $api_key . $nl : '';
         $header .= 'Connection: Close' . $nl . $nl;
 
         fwrite($fp, $header);
@@ -566,7 +557,7 @@ class gw2api {
             }
         } while ($eof === false);
 
-        // $log::lwrite($response . $nl);
+        //        $log::lwrite($response . $nl);
         $response_lines = explode($nl, $response);
         if (isset($response_lines[0]) && $response_lines[0] == 'HTTP/1.1 200 OK') {
             // gw2 api sends their actual api-data in the last line
@@ -575,6 +566,7 @@ class gw2api {
         }
         return false;
     }
+
 }
 $gw2api = new gw2api();
 $gw2api->initEnv();

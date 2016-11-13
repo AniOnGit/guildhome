@@ -5,7 +5,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
     function initEnv() {
         Toro::addRoute(["/activity/shout/:alpha" => "Activity_Shout"]);
         Toro::addRoute(["/activity/shout/:alpha/:number" => "Activity_Shout"]);
-
+        
         Env::registerHook('shout', array(new Activity_Shout(),'getActivityView'));
     }
 
@@ -17,7 +17,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         $page->addContent('{##main##}', $menu->activityMenu('shout', $compact = true));
         switch ($alpha) {
             case 'new':
-                if (! $login->isLoggedIn()) {
+                if (!$login->isLoggedIn()) {
                     return false;
                 }
                 $page->addContent('{##main##}', '<h2>New shout</h2>');
@@ -27,7 +27,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
                 }
                 break;
             case 'update':
-                if (! $login->isLoggedIn()) {
+                if (!$login->isLoggedIn()) {
                     return false;
                 }
                 $page->addContent('{##main##}', '<h2>Update shout</h2>');
@@ -37,7 +37,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
                 }
                 break;
             case 'delete':
-                if (! $login->isLoggedIn()) {
+                if (!$login->isLoggedIn()) {
                     return false;
                 }
                 $page->addContent('{##main##}', '<h2>Delete shout</h2>');
@@ -49,7 +49,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
     function post($alpha, $shout_id = NULL) {
         $env = Env::getInstance();
         $login = new Login();
-        if (! $login->isLoggedIn()) {
+        if (!$login->isLoggedIn()) {
             return false;
         }
         switch ($alpha) {
@@ -94,8 +94,8 @@ class Activity_Shout extends Activity implements IDatabaseModel {
                     WHERE ash.activity_id = '$id'
                     LIMIT 1;";
         $query = $db->query($sql);
-
-        if ($query !== false and $query->num_rows >= 1) {
+        
+        if ($query !== false AND $query->num_rows >= 1) {
             while ($result_row = $query->fetch_object()) {
                 $activity = $result_row;
             }
@@ -107,10 +107,10 @@ class Activity_Shout extends Activity implements IDatabaseModel {
     function saveActivityTypeDetails($activity_id) {
         $db = db::getInstance();
         $env = Env::getInstance();
-
+        
         // save activity meta data
         $content = $env->post('activity')['content'];
-
+        
         $sql = "INSERT INTO activity_shouts (activity_id, content) VALUES ('$activity_id', '$content');";
         $query = $db->query($sql);
         if ($query !== false) {
@@ -126,24 +126,24 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         $db = db::getInstance();
         $env = Env::getInstance();
         $login = new Login();
-
+        
         $userid = $login->currentUserID();
         $act = $this->getActivityById($shout_id);
         if ($userid != $act->userid) {
             return false;
         }
-
+        
         $content = $env->post('activity')['content'];
         $allow_comments = isset($env->post('activity')['comments']) ? '1' : '0';
         $sql = "UPDATE activities SET
                             comments_enabled= '$allow_comments'
                         WHERE id = '$shout_id';";
         $query = $db->query($sql);
-
+        
         $sql = "UPDATE activity_shouts SET
                         content = '$content'
                     WHERE activity_id = '$shout_id';";
-
+        
         $query = $db->query($sql);
         if ($query !== false) {
             $env->clearPost('activity');
@@ -156,12 +156,12 @@ class Activity_Shout extends Activity implements IDatabaseModel {
 
     public function createDatabaseTables($overwriteIfExists) {
         $db = db::getInstance();
-
+        
         if ($overwriteIfExists) {
             $sqlDropExistingPollTables = "DROP TABLE IF EXISTS activity_shouts";
             $db->query($overwriteIfExists);
         }
-
+        
         $sqlShoutsTable = "CREATE TABLE `activity_shouts` (`content` text,`activity_id` int(6) DEFAULT NULL,`comments_activated` tinyint(4) NOT NULL,
 				UNIQUE KEY `activity_id` (`activity_id`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
         $db->query($sqlShoutsTable);
@@ -172,12 +172,12 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         $view = new View();
         $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_view.php'));
         $view->setContent('{##activity_message##}', '<p>This is how your Shout will look:</p>');
-
+        
         $subView = new View();
         $subView->setTmpl($view->getSubTemplate('{##activity_loop##}'));
         $subView->addContent('{##activity_published##}', date('Y-m-d H:i:s'));
         $subView->addContent('{##activity_type##}', '<strong>a shout</strong>');
-
+        
         $env = Env::getInstance();
         $content = Parsedown::instance()->text($env->post('activity')['content']);
         $subView->addContent('{##css##}', ' preview');
@@ -187,19 +187,19 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         $subView->addContent('{##activity_identity##}', $identity->getIdentityById($login->currentUserID(), 0));
         $subView->addContent('{##avatar##}', $identity->getAvatarByUserId($login->currentUserID()));
         $subView->replaceTags();
-
+        
         $view->addContent('{##activity_loop##}', $subView);
         $view->replaceTags();
-
+        
         return $view;
     }
 
     public function getActivityView($activity_id = NULL, $compact = NULL) {
         $act = parent::getActivityMetaById($activity_id);
-
+        
         $view = new View();
         $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_view.php'));
-
+        
         $subView = new View();
         $subView->setTmpl($view->getSubTemplate('{##activity_loop##}'));
         if (isset($act->create_time)) {
@@ -211,35 +211,35 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         if ($act->deleted == '1') {
             $subView->addContent('{##css##}', ' deleted');
         }
-
+        
         $activity_event = $this->getActivityById($act->id);
         $content = Parsedown::instance()->text($activity_event->content);
-
+        
         $delete_link = '/activity/shout/delete/' . $act->id;
         $update_link = '/activity/shout/update/' . $act->id;
         $comment_link = '/comment/activity/view/' . $act->id;
-
+        
         $subView->addContent('{##activity_content##}', $content);
-
+        
         if (isset($act->userid)) {
             $identity = new Identity();
             $subView->addContent('{##activity_identity##}', $identity->getIdentityById($act->userid, 0));
             $subView->addContent('{##avatar##}', $identity->getAvatarByUserId($act->userid));
         }
-
-        if (isset($activity_event->comments_enabled) and $activity_event->comments_enabled == '1') {
+        
+        if (isset($activity_event->comments_enabled) AND $activity_event->comments_enabled == '1') {
             $comment = new Activity_Comment();
             $comment_count = $comment->getCommentCount($act->id);
-
+            
             $visitorView = new View();
             $visitorView->setTmpl($view->getSubTemplate('{##activity_not_logged_in##}'));
             $visitorView->addContent('{##comment_link##}', View::linkFab($comment_link, "comments ($comment_count)"));
             $visitorView->replaceTags();
             $subView->addContent('{##activity_not_logged_in##}', $visitorView);
         }
-
+        
         $login = new Login();
-        if ($login->isLoggedIn() and isset($act->userid) and $login->currentUserID() === $act->userid) {
+        if ($login->isLoggedIn() AND isset($act->userid) AND $login->currentUserID() === $act->userid) {
             $memberView = new View();
             $memberView->setTmpl($view->getSubTemplate('{##activity_logged_in##}'));
             $memberView->addContent('{##delete_link##}', View::linkFab($delete_link, 'delete'));
@@ -248,41 +248,41 @@ class Activity_Shout extends Activity implements IDatabaseModel {
             $subView->addContent('{##activity_logged_in##}', $memberView);
         }
         $subView->replaceTags();
-
+        
         $view->addContent('{##activity_loop##}', $subView);
         $view->replaceTags();
-
+        
         return $view;
     }
 
     function getActivityForm($id = NULL) {
         $env = Env::getInstance();
         $msg = Msg::getInstance();
-
+        
         if ($id === NULL) {
             if ($env->post('activity') === FALSE) { // check comments by default
                 $comments_checked = 'checked="checked"';
             } else {
-                if (! empty($env->post('activity')['comments']) and is_string($env->post('activity')['comments']) === TRUE) {
+                if (!empty($env->post('activity')['comments']) AND is_string($env->post('activity')['comments']) === TRUE) {
                     $comments_checked = 'checked="checked"';
                 } else {
                     $comments_checked = '';
                 }
             }
-
+            
             $content = $env->post('activity')['content'];
             $content = str_replace("\n\r", "&#13;", $content);
-
+            
             $view = new View();
             $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array('{##form_action##}' => '/activity/shout/new','{##activity_content##}' => $content,'{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),'{##activity_shout_content_saved##}' => $msg->fetch('activity_shout_content_saved', 'success'),'{##activity_comments_checked##}' => $comments_checked,'{##preview_text##}' => 'Preview','{##submit_text##}' => 'Say it loud'));
         } else {
             $act = $this->getActivityById($id);
             $content = (isset($env->post('activity')['content'])) ? $env->post('activity')['content'] : $act->content;
             $content = str_replace("\n\r", "&#13;", $content);
-
+            
             $comments_checked = (isset($env->post('activity')['comments'])) ? $env->post('activity')['comments'] : $act->comments_enabled;
             $comments_checked = ($comments_checked == '1') ? 'checked="' . $comments_checked . '"' : '';
-
+            
             $view = new View();
             $view->setTmpl($view->loadFile('/views/activity/shout/activity_shout_form.php'), array('{##form_action##}' => '/activity/shout/update/' . $id,'{##activity_content##}' => $content,'{##activity_content_validation##}' => $msg->fetch('activity_shout_content_validation'),'{##activity_shout_content_saved##}' => $msg->fetch('activity_shout_content_saved', 'success'),'{##activity_comments_checked##}' => $comments_checked,'{##preview_text##}' => 'Preview','{##draft_text##}' => 'Save as draft','{##submit_text##}' => "i'm sure now!"));
         }
@@ -297,7 +297,7 @@ class Activity_Shout extends Activity implements IDatabaseModel {
         } else {
             $content = '';
         }
-
+        
         $view = new View();
         $view->setTmpl($view->loadFile('/views/activity/delete_activity_form.php'), array('{##form_action##}' => '/activity/shout/delete/' . $id,'{##activity_content##}' => $content,'{##submit_text##}' => "delete",'{##cancel_text##}' => "cancel"));
         $view->replaceTags();
@@ -307,13 +307,13 @@ class Activity_Shout extends Activity implements IDatabaseModel {
     function validateActivityTypeDetails() {
         $msg = Msg::getInstance();
         $env = Env::getInstance();
-
+        
         $errors = false;
         if (empty($env->post('activity')['content'])) {
             $msg->add('activity_shout_content_validation', 'Say something!! Please :)');
             $errors = true;
         }
-
+        
         if ($errors === false) {
             return true;
         }
