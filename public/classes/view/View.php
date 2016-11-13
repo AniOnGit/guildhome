@@ -1,27 +1,24 @@
 <?php
 
 class View {
-
     var $src;
     var $tmpl;
     var $tags;
-    
     var $areas;
-    
     var $content = [];
 
     function loadFile($tmpl_path) {
         $filename = 'themes/' . constant('theme') . $tmpl_path;
         if (file_exists($filename)) {
-           return file($filename);
+            return file($filename);
         }
         $filename = 'themes/' . constant('default_theme') . $tmpl_path;
         if (file_exists($filename)) {
-           return file($filename);
+            return file($filename);
         }
         return false;
     }
-    
+
     function setTmpl() {
         if (is_array(func_get_arg(0))) {
             $this->src = implode('', func_get_arg(0));
@@ -32,12 +29,12 @@ class View {
         if (func_num_args() > 1) {
             $this->content = func_get_arg(1);
         }
-       
+
         $this->getTemplateTags();
     }
-    
+
     function addContent($key, $content) {
-        if (!empty($this->content[$key])) {
+        if (! empty($this->content[$key])) {
             $this->content[$key] .= $content;
         } else {
             $this->content[$key] = $content;
@@ -47,16 +44,15 @@ class View {
     function setContent($key, $content) {
         $this->content[$key] = $content;
     }
-    
+
     function getSection($content, $start, $end) {
         $r = explode($start, $content);
-        if (isset($r[1])){
+        if (isset($r[1])) {
             $r = explode($end, $r[1]);
             return $r[0];
         }
         return '';
     }
-
 
     function getTemplateTags() {
         preg_match_all("|{##.*?##}|", $this->tmpl, $this->tags['open']);
@@ -75,7 +71,7 @@ class View {
                 if (in_array(str_replace("{##", "{/##", $tag), $this->tags['closed'][0])) {
                     // Starttag hat ein passendes Endtag, also eine Fläche
                     $regex = "|$tag(.*?)" . str_replace("{##", "{/##", $tag) . "|is";
-                    $this->tmpl = preg_replace($regex, (isset($this->content[$tag]) ? $this->content[$tag] : '') , $this->tmpl);
+                    $this->tmpl = preg_replace($regex, (isset($this->content[$tag]) ? $this->content[$tag] : ''), $this->tmpl);
                 } else {
                     // Kein Endtag, also ein Platzhalter
                     if (isset($this->content[$tag])) {
@@ -93,36 +89,36 @@ class View {
         }
         /**
          * Alle übrigen Tags löschen
-         * */
+         */
         $this->tmpl = preg_replace("~\{##(\w+)##\}~", "", $this->tmpl);
         $this->tmpl = preg_replace("~\{\##(\w+)##\}~", "", $this->tmpl);
     }
-    
+
     function getSubTemplate($tag) {
         return $this->areas[$tag];
     }
-    
+
     function show() {
         $this->tmpl = preg_replace('/^\h*\v+/m', '', $this->tmpl);
         return $this->tmpl;
     }
-    
+
     function clearAll() {
         foreach ($this as &$value) {
             $value = null;
         }
     }
-    
+
     function __toString() {
         return $this->show();
     }
-    
+
     static function linkFab($url, $text, $css = NULL) {
-        $link_view = new self;
+        $link_view = new self();
         $link_view->setTmpl($link_view->loadFile('/views/core/link.php'));
         $link_view->addContent('{##link_url##}', $url);
         if ($css !== NULL) {
-            $css_view = new self;
+            $css_view = new self();
             $css_view->setTmpl($link_view->getSubTemplate('{##css##}'));
             $css_view->addContent('{##class##}', $css);
             $css_view->replaceTags();
@@ -133,4 +129,32 @@ class View {
         return $link_view;
     }
 
+    /**
+     * Creates a View object including a prettified button within a form.
+     * The button's name is 'submit'.
+     *
+     * @param unknown $action_url
+     *            url to page providing the post() method which shall be refered to on click
+     * @param unknown $redirect_url
+     *            optional url for redirect after click
+     * @param unknown $text
+     *            the button's label
+     * @return View
+     */
+    static function createPrettyButtonForm($action_url, $redirect_url, $text) {
+        $view = new self();
+        $view->setTmpl($view->loadFile('/views/core/widgets/prettybutton.php'));
+        $view->setContent('{##action##}', $action_url);
+        $view->addContent('{##text##}', $text);
+
+        if (isset($redirect_url)) {
+            $subView = new View();
+            $subView->setTmpl($view->getSubTemplate('{##target_url##}'));
+            $subView->addContent('{##url##}', $target_url);
+            $subView->replaceTags();
+            $view->addContent('{##target_url##}', $subView);
+        }
+        $view->replaceTags();
+        return $view;
+    }
 }

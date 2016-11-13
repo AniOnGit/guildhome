@@ -13,8 +13,8 @@ class Database {
         $page = Page::getInstance();
 
         if ($admin) {
-            $page->setContent('{##main##}', "Great, you are an admin! Let's push a button:\n ");
-            $page->addContent('{##main##}', $this->getButton());
+            $page->setContent('{##main##}', "");
+            $page->addContent('{##main##}', View::createPrettyButtonForm("/dbsetup", null, "Start DB setup!"));
         } else {
             $page->setContent('{##main##}', "Try again, guy, you are no admin!");
         }
@@ -27,16 +27,6 @@ class Database {
                 $model->createDatabaseTables((boolean) true);
             }
         }
-    }
-
-    function getButton($target_url = '') {
-        $view = new View();
-        $view->setTmpl($view->loadFile('/views/activity/event/signups/activity_event_signups_button.php'));
-        $view->setContent('{##signup##}', '/dbsetup');
-        $view->addContent('{##signup_text##}', 'Do it!');
-        $view->addContent('{##target_url##}', $target_url);
-        $view->replaceTags();
-        return $view;
     }
 }
 $init = new Database();
